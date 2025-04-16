@@ -9,7 +9,7 @@
   }
 
   backend "s3" {
-    bucket         = "beauty-booking-terraform-state-dev"
+    bucket         = "beauty-booking-terraform-state-dev-test-freedev"
     key            = "terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "beauty-booking-terraform-locks-dev"

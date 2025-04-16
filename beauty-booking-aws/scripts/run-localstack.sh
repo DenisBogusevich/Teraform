@@ -27,7 +27,7 @@ services:
       - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock
       - HOSTNAME_EXTERNAL=localhost
-      - SERVICES=s3,dynamodb,rds,sqs,sns,cognito,iam,ec2,elasticache,ecs,lambda,apigateway,secretsmanager,cloudwatch
+      - SERVICES=s3,dynamodb,iam,lambda,sqs,sns,ec2,apigateway,ecs
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=mock-access-key

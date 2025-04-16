@@ -85,17 +85,6 @@ module "messaging" {
   ]
 }
 
-module "security" {
-  source = "../../modules/security"
-
-  environment = var.environment
-  vpc_id      = module.network.vpc_id
-
-  depends_on = [
-    module.network
-  ]
-}
-
 module "monitoring" {
   source = "../../modules/monitoring"
 

@@ -13,7 +13,7 @@ fi
 
 ENVIRONMENT=$1
 REGION="us-east-1"
-BUCKET_NAME="beauty-booking-terraform-state-${ENVIRONMENT}"
+BUCKET_NAME="beauty-booking-terraform-state-dev-test-free${ENVIRONMENT}"
 DYNAMODB_TABLE="beauty-booking-terraform-locks-${ENVIRONMENT}"
 
 echo "Creating S3 bucket for Terraform state: ${BUCKET_NAME}"
