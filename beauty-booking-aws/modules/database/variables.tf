@@ -82,3 +82,29 @@ variable "opensearch_instance_type" {
   type        = string
   default     = "t3.small.search"
 }
+
+variable "opensearch_master_user_name" {
+  description = "OpenSearch master user name"
+  type        = string
+  default     = "admin"
+  sensitive   = true
+}
+
+variable "opensearch_master_user_password" {
+  description = "OpenSearch master user password"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "opensearch_allowed_ips" {
+  description = "List of IP addresses allowed to access OpenSearch"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]  # Not recommended for production
+}
+
+variable "region" {
+  description = "AWS region"
+  type        = string
+  default     = "us-east-1"
+}
