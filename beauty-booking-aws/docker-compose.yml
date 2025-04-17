@@ -3,24 +3,53 @@ services:
     container_name: beauty-booking-localstack
     image: localstack/localstack:latest
     ports:
-      - "4566:4566"
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
     environment:
-      - DEBUG=0
+      - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock
-      - HOSTNAME_EXTERNAL=localhost
-      - SERVICES=s3,dynamodb,iam,lambda,sqs,sns,ec2,apigateway,ecs
-      - DEFAULT_REGION=us-east-1
+      - LOCALSTACK_HOST=localhost
+      - SERVICES=s3,dynamodb,iam,lambda,sqs,sns,ec2,apigateway,ecs,rds,elasticache,cognito-idp,cloudfront
       - AWS_DEFAULT_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      # Prevent tmp directory issues
-      - TMPDIR=/tmp/localstack_tmp
-      # Avoid persistent data
+      # Disable persistence for local dev to avoid file locking issues
       - PERSISTENCE=0
+      # CRITICAL: Don't use /tmp/localstack directly - use a subdirectory
+      - TMPDIR=/var/lib/localstack/tmp
     volumes:
+      - localstack-data:/var/lib/localstack
       - "/var/run/docker.sock:/var/run/docker.sock"
-      # Use a named volume instead of mounting host path directly
-      - "localstack_tmp:/tmp/localstack_tmp"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - beauty-booking-local
+
+  # Optional PostgreSQL container for a real database instead of emulated RDS
+  postgres:
+    image: postgres:13
+    container_name: beauty-booking-postgres
+    environment:
+      POSTGRES_DB: beauty_booking_local
+      POSTGRES_USER: localuser
+      POSTGRES_PASSWORD: localpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - beauty-booking-local
+
+  # Optional Redis container for cache instead of emulated ElastiCache
+  redis:
+    image: redis:6
+    container_name: beauty-booking-redis
+    ports:
+      - "6379:6379"
     networks:
       - beauty-booking-local
 
@@ -29,5 +58,7 @@ networks:
     driver: bridge
 
 volumes:
-  localstack_tmp:
+  localstack-data:
+    driver: local
+  postgres-data:
     driver: local

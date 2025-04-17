@@ -73,7 +73,7 @@ resource "aws_api_gateway_method" "health_get" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   resource_id   = aws_api_gateway_resource.health.id
   http_method   = "GET"
-  authorization = "NONE"  # Changed from authorization_type
+  authorization = "NONE"
 }
 
 resource "aws_api_gateway_integration" "health_get" {
@@ -108,8 +108,8 @@ resource "aws_api_gateway_integration_response" "health_get" {
 
   response_templates = {
     "application/json" = jsonencode({
-      status  = "healthy",
-      version = "1.0.0",
+      status      = "healthy",
+      version     = "1.0.0",
       environment = var.environment
     })
   }
@@ -150,20 +150,24 @@ resource "aws_api_gateway_stage" "main" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   stage_name    = var.environment
 
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
-    format          = jsonencode({
-      requestId               = "$context.requestId"
-      sourceIp                = "$context.identity.sourceIp"
-      requestTime             = "$context.requestTime"
-      protocol                = "$context.protocol"
-      httpMethod              = "$context.httpMethod"
-      resourcePath            = "$context.resourcePath"
-      routeKey                = "$context.routeKey"
-      status                  = "$context.status"
-      responseLength          = "$context.responseLength"
-      integrationErrorMessage = "$context.integrationErrorMessage"
-    })
+  # Conditional access log settings for LocalStack compatibility
+  dynamic "access_log_settings" {
+    for_each = var.environment == "local" ? [] : [1]
+    content {
+      destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+      format          = jsonencode({
+        requestId               = "$context.requestId"
+        sourceIp                = "$context.identity.sourceIp"
+        requestTime             = "$context.requestTime"
+        protocol                = "$context.protocol"
+        httpMethod              = "$context.httpMethod"
+        resourcePath            = "$context.resourcePath"
+        routeKey                = "$context.routeKey"
+        status                  = "$context.status"
+        responseLength          = "$context.responseLength"
+        integrationErrorMessage = "$context.integrationErrorMessage"
+      })
+    }
   }
 
   tags = {
@@ -183,11 +187,24 @@ resource "aws_cloudwatch_log_group" "api_gateway" {
   }
 }
 
+# Conditionally create the Cognito authorizer
 resource "aws_api_gateway_authorizer" "cognito" {
+  count                  = var.environment == "local" ? 0 : 1
   name                   = "${var.environment}-cognito-authorizer"
   rest_api_id            = aws_api_gateway_rest_api.main.id
   type                   = "COGNITO_USER_POOLS"
   provider_arns          = [var.cognito_user_pool]
   identity_source        = "method.request.header.Authorization"
   authorizer_credentials = aws_iam_role.authorizer_lambda_role.arn
+}
+
+# Lambda authorizer for local environment
+resource "aws_api_gateway_authorizer" "lambda" {
+  count                  = var.environment == "local" ? 1 : 0
+  name                   = "${var.environment}-lambda-authorizer"
+  rest_api_id            = aws_api_gateway_rest_api.main.id
+  type                   = "TOKEN"
+  authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
+  authorizer_credentials = aws_iam_role.authorizer_lambda_role.arn
+  identity_source        = "method.request.header.Authorization"
 }

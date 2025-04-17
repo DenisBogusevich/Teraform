@@ -7,15 +7,20 @@
       version = "~> 4.0"
     }
   }
+
+  backend "local" {
+    path = "terraform.tfstate"
+  }
 }
 
 provider "aws" {
   region                      = var.region
-  access_key                  = "mock-access-key"
-  secret_key                  = "mock-secret-key"
+  access_key                  = "test"
+  secret_key                  = "test"
   skip_credentials_validation = true
   skip_metadata_api_check     = true
   skip_requesting_account_id  = true
+  s3_use_path_style           = true
 
   # LocalStack endpoint
   endpoints {
@@ -33,6 +38,8 @@ provider "aws" {
     kinesis        = "http://localhost:4566"
     kms            = "http://localhost:4566"
     lambda         = "http://localhost:4566"
+    rds            = "http://localhost:4566"
+    redshift       = "http://localhost:4566"
     route53        = "http://localhost:4566"
     s3             = "http://localhost:4566"
     secretsmanager = "http://localhost:4566"
@@ -42,6 +49,11 @@ provider "aws" {
     ssm            = "http://localhost:4566"
     stepfunctions  = "http://localhost:4566"
     sts            = "http://localhost:4566"
+    cloudfront     = "http://localhost:4566"
+    cognitoidentity = "http://localhost:4566"
+    cognitoidp     = "http://localhost:4566"
+    docdb          = "http://localhost:4566"
+    opensearch     = "http://localhost:4566"
   }
 
   default_tags {

@@ -1,6 +1,4 @@
-﻿# Replace the existing aws_lambda_function resource in modules/api-gateway/lambda-authorizer.tf
-
-# Create IAM role for the Lambda Authorizer
+﻿# IAM role for the Lambda Authorizer
 resource "aws_iam_role" "authorizer_lambda_role" {
   name = "${var.environment}-api-authorizer-role"
 
@@ -48,6 +46,53 @@ resource "aws_iam_role_policy" "authorizer_cognito_access" {
   })
 }
 
+# Create a local archive file if it doesn't exist
+resource "local_file" "lambda_authorizer_code" {
+  content = <<EOF
+// Simple API Gateway Lambda Authorizer for LocalStack
+exports.handler = async (event, context) => {
+  console.log('Event:', JSON.stringify(event, null, 2));
+  
+  // Get the Authorization header
+  const authHeader = event.headers ? event.headers.Authorization || event.headers.authorization : null;
+  
+  // For local development, we'll allow all requests
+  // In a real environment, you would validate tokens here
+  const userId = 'user123';
+  return {
+    principalId: userId,
+    policyDocument: {
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Action: 'execute-api:Invoke',
+          Effect: 'Allow',
+          Resource: event.methodArn || '*'
+        }
+      ]
+    },
+    context: {
+      userId: userId,
+      environment: '${var.environment}'
+    }
+  };
+};
+EOF
+  filename = "${path.module}/lambda-functions/index.js"
+}
+
+resource "null_resource" "create_zip" {
+  depends_on = [local_file.lambda_authorizer_code]
+
+  provisioner "local-exec" {
+    command = "cd ${path.module}/lambda-functions && mkdir -p ../tmp && zip -r ../tmp/authorizer.zip index.js && mv ../tmp/authorizer.zip ./"
+  }
+
+  triggers = {
+    lambda_code = local_file.lambda_authorizer_code.content
+  }
+}
+
 resource "aws_lambda_function" "authorizer" {
   function_name = "${var.environment}-api-authorizer"
   description   = "Lambda function for API Gateway authorization"
@@ -57,11 +102,8 @@ resource "aws_lambda_function" "authorizer" {
   timeout       = 10
   memory_size   = 128
 
-  # Use inline code instead of a zip file
-  filename      = "${path.module}/lambda-functions/authorizer.zip"
-
-  # Conditional creation based on the existence of the zip file
-  # comment this line if you've created the zip file
+  # Using the ZIP file created by the null resource
+  filename         = "${path.module}/lambda-functions/authorizer.zip"
   source_code_hash = fileexists("${path.module}/lambda-functions/authorizer.zip") ? filebase64sha256("${path.module}/lambda-functions/authorizer.zip") : null
 
   environment {
@@ -71,24 +113,10 @@ resource "aws_lambda_function" "authorizer" {
     }
   }
 
+  depends_on = [null_resource.create_zip]
+
   tags = {
     Name        = "${var.environment}-api-authorizer"
     Environment = var.environment
-  }
-}
-
-# Add this null resource to create a temporary zip file if missing
-resource "null_resource" "create_empty_zip" {
-  # Only create if the file doesn't exist
-  count = fileexists("${path.module}/lambda-functions/authorizer.zip") ? 0 : 1
-
-  # This will execute only once when needed
-  provisioner "local-exec" {
-    command = <<EOT
-      mkdir -p ${path.module}/lambda-functions
-      echo 'exports.handler = async (event) => { return { principalId: "user", policyDocument: { Version: "2012-10-17", Statement: [{ Action: "execute-api:Invoke", Effect: "Allow", Resource: event.methodArn }] } }; };' > /tmp/index.js
-      cd /tmp && zip -r authorizer.zip index.js
-      mv /tmp/authorizer.zip ${path.module}/lambda-functions/
-    EOT
   }
 }
