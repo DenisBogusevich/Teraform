@@ -73,7 +73,7 @@ resource "aws_api_gateway_method" "health_get" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   resource_id   = aws_api_gateway_resource.health.id
   http_method   = "GET"
-  authorization_type = "NONE"
+  authorization = "NONE"  # Changed from authorization_type
 }
 
 resource "aws_api_gateway_integration" "health_get" {
@@ -181,4 +181,13 @@ resource "aws_cloudwatch_log_group" "api_gateway" {
     Name        = "${var.environment}-api-gateway-logs"
     Environment = var.environment
   }
+}
+
+resource "aws_api_gateway_authorizer" "cognito" {
+  name                   = "${var.environment}-cognito-authorizer"
+  rest_api_id            = aws_api_gateway_rest_api.main.id
+  type                   = "COGNITO_USER_POOLS"
+  provider_arns          = [var.cognito_user_pool]
+  identity_source        = "method.request.header.Authorization"
+  authorizer_credentials = aws_iam_role.authorizer_lambda_role.arn
 }

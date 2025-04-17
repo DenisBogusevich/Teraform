@@ -70,7 +70,7 @@ module "storage" {
   frontend_bucket_name = var.frontend_bucket_name
   uploads_bucket_name  = var.uploads_bucket_name
 }
-
+/*
 module "messaging" {
   source = "../../modules/messaging"
 
@@ -83,8 +83,8 @@ module "messaging" {
   depends_on = [
     module.network
   ]
-}
-
+}*/
+/*
 module "monitoring" {
   source = "../../modules/monitoring"
 
@@ -96,4 +96,4 @@ module "monitoring" {
   depends_on = [
     module.container
   ]
-}
+}*/
